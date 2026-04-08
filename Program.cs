@@ -3,6 +3,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
+
 // ADD CORS
 builder.Services.AddCors(options =>
 {
@@ -15,6 +16,10 @@ builder.Services.AddCors(options =>
         });
 });
 
+// ADD SWAGGER
+builder.Services.AddEndpointsApiExplorer(); // Needed for minimal APIs
+builder.Services.AddSwaggerGen(); // Add Swagger generator
+
 var app = builder.Build();
 
 // Configure middleware
@@ -23,6 +28,13 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
 }
+// ENABLE SWAGGER (only in development or always if you want)
+app.UseSwagger(); // Serve Swagger JSON
+object value = app.UseSwaggerUI(options =>
+{
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
+    options.RoutePrefix = ""; // Swagger at root URL (optional)
+});
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();

@@ -1,9 +1,14 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using System.Data;
+using practiceApplication.Models;
+
 
 namespace practiceApplication.Controllers
 {
+    [ApiController]
+    [Route("api/[controller]")]
     public class TreasureController : Controller
     {
         private readonly IConfiguration _configuration;
@@ -13,7 +18,7 @@ namespace practiceApplication.Controllers
             _configuration = configuration;
         }
 
-        [HttpGet]
+        [HttpGet("InsertClient")]
         public IActionResult InsertClient(string FullName, string Email, string passwords)
         {
             string message = "";
@@ -35,7 +40,7 @@ namespace practiceApplication.Controllers
             return Json(new { message = message });
         }
 
-        [HttpGet]
+        [HttpGet("LoginClient")]
         public IActionResult LoginClient(string Email, string passwords)
         {
             using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
@@ -66,7 +71,7 @@ namespace practiceApplication.Controllers
         }
 
         // GET ALL PRODUCTS
-        [HttpGet]
+        [HttpGet("GetProducts")]
         public IActionResult GetProducts()
         {
             List<object> products = new List<object>();
@@ -96,59 +101,59 @@ namespace practiceApplication.Controllers
 
             return Json(products);
         }
-        [HttpPost]
-public IActionResult AddToCart([FromBody] Models.CartModel cart)
-{
-    int currentQuantity = 0;
-
-    try
-    {
-        using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
-        using (SqlCommand cmd = new SqlCommand("AddToCart", con))
+        [HttpPost("AddToCart")]
+        public IActionResult AddToCart([FromBody] Models.CartModel cart)
         {
-            cmd.CommandType = CommandType.StoredProcedure;
+            int currentQuantity = 0;
 
-            cmd.Parameters.AddWithValue("@ClientID", cart.ClientID);
-            cmd.Parameters.AddWithValue("@Productid", cart.Productid);
-            cmd.Parameters.AddWithValue("@Productimage", cart.Productimage);
-            cmd.Parameters.AddWithValue("@Quantity", cart.Quantity);
-            cmd.Parameters.AddWithValue("@Price", cart.Price);
+            try
+            {
+                using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                using (SqlCommand cmd = new SqlCommand("AddToCart", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
 
-            con.Open();
-            cmd.ExecuteNonQuery();
+                    cmd.Parameters.AddWithValue("@ClientID", cart.ClientID);
+                    cmd.Parameters.AddWithValue("@Productid", cart.Productid);
+                    cmd.Parameters.AddWithValue("@Productimage", cart.Productimage);
+                    cmd.Parameters.AddWithValue("@Quantity", cart.Quantity);
+                    cmd.Parameters.AddWithValue("@Price", cart.Price);
+
+                    con.Open();
+                    cmd.ExecuteNonQuery();
+                }
+
+                // Get total quantity of items in the cart
+                using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                using (SqlCommand countCmd = new SqlCommand("SELECT SUM(Quantity) FROM Cart WHERE ClientID=@ClientID", con))
+                {
+                    countCmd.Parameters.AddWithValue("@ClientID", cart.ClientID);
+                    con.Open();
+                    var result = countCmd.ExecuteScalar();
+                    currentQuantity = result != DBNull.Value ? Convert.ToInt32(result) : 0;
+                }
+
+                return Json(new { success = true, message = "Product added to cart", totalQuantity = currentQuantity });
+            }
+            catch (SqlException ex)
+            {
+                // Detect stock exception from SQL
+                if (ex.Message.Contains("Not enough stock available"))
+                {
+                    return Json(new { success = false, message = "Cannot add more than available stock", totalQuantity = currentQuantity });
+                }
+
+                // Other SQL errors
+                return Json(new { success = false, message = "Error adding product to cart: " + ex.Message, totalQuantity = currentQuantity });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Error: " + ex.Message, totalQuantity = currentQuantity });
+            }
         }
 
-        // Get total quantity of items in the cart
-        using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
-        using (SqlCommand countCmd = new SqlCommand("SELECT SUM(Quantity) FROM Cart WHERE ClientID=@ClientID", con))
-        {
-            countCmd.Parameters.AddWithValue("@ClientID", cart.ClientID);
-            con.Open();
-            var result = countCmd.ExecuteScalar();
-            currentQuantity = result != DBNull.Value ? Convert.ToInt32(result) : 0;
-        }
 
-        return Json(new { success = true, message = "Product added to cart", totalQuantity = currentQuantity });
-    }
-    catch (SqlException ex)
-    {
-        // Detect stock exception from SQL
-        if (ex.Message.Contains("Not enough stock available"))
-        {
-            return Json(new { success = false, message = "Cannot add more than available stock", totalQuantity = currentQuantity });
-        }
-
-        // Other SQL errors
-        return Json(new { success = false, message = "Error adding product to cart: " + ex.Message, totalQuantity = currentQuantity });
-    }
-    catch (Exception ex)
-    {
-        return Json(new { success = false, message = "Error: " + ex.Message, totalQuantity = currentQuantity });
-    }
-}
-
-
-        [HttpGet]
+        [HttpGet("Cart")]
         public IActionResult Cart(int ClientID)
         {
             List<object> cart = new List<object>();
@@ -182,7 +187,7 @@ public IActionResult AddToCart([FromBody] Models.CartModel cart)
         }
 
 
-        [HttpGet]
+        [HttpGet("RemoveItem")]
         public IActionResult RemoveItem(int Cartid)
         {
             try
@@ -206,7 +211,7 @@ public IActionResult AddToCart([FromBody] Models.CartModel cart)
             }
         }
 
-        [HttpGet]
+        [HttpGet("UpdateCartQuantity")]
         public IActionResult UpdateCartQuantity(int Cartid, int Quantity)
         {
             try
@@ -235,7 +240,7 @@ public IActionResult AddToCart([FromBody] Models.CartModel cart)
             }
         }
 
-        [HttpGet]
+        [HttpGet("Contect")]
         public IActionResult Contect(string FullName, string Email, string messagees)
         {
             using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
@@ -253,7 +258,7 @@ public IActionResult AddToCart([FromBody] Models.CartModel cart)
             return Json(new { message = "messagees send Successfully" });
         }
 
-        [HttpGet]
+        [HttpGet("SearchProduct")]
         public IActionResult SearchProduct(string name)
         {
             List<object> products = new List<object>();
@@ -293,7 +298,7 @@ public IActionResult AddToCart([FromBody] Models.CartModel cart)
 
 
 
-        [HttpPost]
+        [HttpPost("PlaceOrder")]
         public IActionResult PlaceOrder(int ClientID)
         {
             try
@@ -333,7 +338,7 @@ public IActionResult AddToCart([FromBody] Models.CartModel cart)
             }
         }
 
-        [HttpGet]
+        [HttpGet("OrderHistory")]
         public IActionResult OrderHistory(int ClientID)
         {
             List<object> orders = new List<object>();
@@ -368,7 +373,7 @@ public IActionResult AddToCart([FromBody] Models.CartModel cart)
             return Json(orders);
         }
 
-        [HttpPost]
+        [HttpPost("ClearHistory")]
         public IActionResult ClearHistory(int ClientID)
         {
             using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
@@ -385,7 +390,7 @@ public IActionResult AddToCart([FromBody] Models.CartModel cart)
             return Json(new { success = true, message = "History cleared successfully" });
         }
 
-        [HttpPost]
+        [HttpPost("DeleteOrder")]
         public IActionResult DeleteOrder(int OrderId)
         {
             using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
@@ -401,8 +406,165 @@ public IActionResult AddToCart([FromBody] Models.CartModel cart)
 
             return Json(new { success = true, message = "Order removed from history" });
         }
-    }
+
+        // Add to Wishlist
+        [HttpPost("AddWishlist")]
+        public IActionResult AddWishlist([FromBody] Wishlist w)
+        {
+            if (w == null)
+                return BadRequest("Wishlist object is required");
+
+            try
+            {
+                using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                using (SqlCommand cmd = new SqlCommand("sp_AddToWishlist", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@ClientID", w.ClientID);
+                    cmd.Parameters.AddWithValue("@ProductID", w.ProductID);
+                    con.Open();
+                    cmd.ExecuteNonQuery();
+                }
+
+                return Json(new { success = true, message = "Added to Wishlist" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        // Get Wishlist
+        [HttpGet("GetWishlist")]
+        public IActionResult GetWishlist(int ClientID)
+        {
+            List<object> wishlist = new List<object>();
+
+            try
+            {
+                using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                using (SqlCommand cmd = new SqlCommand("sp_GetWishlist", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@ClientID", ClientID);
+
+                    con.Open();
+                    SqlDataReader reader = cmd.ExecuteReader();
+
+                    while (reader.Read())
+                    {
+                        wishlist.Add(new
+                        {
+                            ProductID = reader["ProductID"],
+                            ProductName = reader["Productname"].ToString(),
+                            ProductImage = "https://localhost:7107/images/" + reader["Productimage"].ToString()
+                        });
+                    }
+                }
+
+                return Json(new { success = true, wishlist });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost("RemoveWishlist")]
+        public IActionResult RemoveWishlist([FromBody] Wishlist w)
+        {
+            try
+            {
+                using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                using (SqlCommand cmd = new SqlCommand("sp_RemoveWishlist", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@ClientID", w.ClientID);
+                    cmd.Parameters.AddWithValue("@ProductID", w.ProductID);
+
+                    con.Open();
+                    cmd.ExecuteNonQuery();
+                }
+
+                return Json(new { success = true, message = "Removed from Wishlist" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+
+
+    
+        // Add or Update Wishlist Item with Notes/Tags
+        [HttpPost("AddOrUpdateWishlist")]
+        public IActionResult AddOrUpdateWishlist([FromBody] Wishlist w)
+        {
+            if (w == null)
+                return BadRequest("Wishlist object is required");
+
+            try
+            {
+                using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                using (SqlCommand cmd = new SqlCommand("AddOrUpdateWishlist", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@ClientID", w.ClientID);
+                    cmd.Parameters.AddWithValue("@ProductID", w.ProductID);
+                    cmd.Parameters.AddWithValue("@Note", (object)w.Note ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Tags", (object)w.Tags ?? DBNull.Value);
+
+                    con.Open();
+                    cmd.ExecuteNonQuery();
+                }
+
+                return Json(new { success = true, message = "Wishlist updated successfully" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        // Get Wishlist with Notes and Tags
+        [HttpGet("GetWishlistWithNotes")]
+        public IActionResult GetWishlistWithNotes(int ClientID)
+        {
+            List<object> wishlist = new List<object>();
+
+            try
+            {
+                using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                using (SqlCommand cmd = new SqlCommand("GetWishlistWithNotes", con))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@ClientID", ClientID);
+
+                    con.Open();
+                    SqlDataReader reader = cmd.ExecuteReader();
+
+                    while (reader.Read())
+                    {
+                        wishlist.Add(new
+                        {
+                            ProductID = reader["ProductID"],
+                            ProductName = reader["Productname"].ToString(), // match your SQL alias
+                            Productimage = reader["Productimage"].ToString(),
+                            Note = reader["Note"] == DBNull.Value ? "" : reader["Note"].ToString(),
+                            Tags = reader["Tags"] == DBNull.Value ? "" : reader["Tags"].ToString()
+                        });
+                    }
+                }
+
+                return Json(new { success = true, wishlist });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
 
     }
-
-
+}
