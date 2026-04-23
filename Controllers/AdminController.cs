@@ -192,7 +192,7 @@ namespace practiceApplication.Controllers
 
             using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
             {
-                SqlCommand cmd = new SqlCommand("GetOrdersWithItemsAndUser", con);
+                SqlCommand cmd = new SqlCommand("GetAllOrders", con);
                 cmd.CommandType = CommandType.StoredProcedure;
 
                 con.Open();
@@ -205,22 +205,15 @@ namespace practiceApplication.Controllers
                     {
                         OrderId = Convert.ToInt32(reader["OrderId"]),
                         ClientID = Convert.ToInt32(reader["ClientID"]),
-                       
+
                         OrderDate = Convert.ToDateTime(reader["OrderDate"]),
                         TotalAmount = Convert.ToDecimal(reader["TotalAmount"]),
                         Status = reader["Status"].ToString(),
 
-                        OrderItemId = Convert.ToInt32(reader["OrderItemId"]),
-                        ProductId = Convert.ToInt32(reader["ProductId"]),
-                        Quantity = Convert.ToInt32(reader["Quantity"]),
-                        Price = Convert.ToDecimal(reader["Price"]),
-                        LineTotal = Convert.ToDecimal(reader["LineTotal"]),
-
                         CustomerName = reader["CustomerName"].ToString(),
                         CustomerEmail = reader["CustomerEmail"].ToString(),
                         CustomerAddress = reader["CustomerAddress"].ToString(),
-                        PaymentMethod = reader["PaymentMethod"].ToString(),
-
+                        PaymentMethod = reader["PaymentMethod"].ToString()
                     });
                 }
             }
