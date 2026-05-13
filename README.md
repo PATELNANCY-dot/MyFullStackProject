@@ -123,10 +123,10 @@ https://localhost:7107/api
 
 ## 📸 API Preview (Swagger UI)
 
-<img src="Screenshots/swagger.png" width="800"/>
+<img src="wwwroot/images/swagger.png" width="800"/>
 
 ---
-
+<img src="wwwroot/images/swagger1.png" width="800"/>
 ## 📬 API Endpoints Overview
 
 ### 🔐 Admin APIs
