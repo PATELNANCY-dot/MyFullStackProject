@@ -2,6 +2,9 @@
 using Microsoft.Data.SqlClient;
 using MyFullStackProject.Models;
 using System.Data;
+using System.Net.Mail;
+using MailKit.Net.Smtp;
+using MimeKit;
 
 namespace practiceApplication.Controllers
 {
@@ -339,6 +342,127 @@ namespace practiceApplication.Controllers
 
             return Ok(new { message = "Product Deleted Successfully" });
         }
+
+
+
+[HttpPost("SendOTP")]
+    public IActionResult SendOTP(string Email)
+    {
+        using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+        {
+            string otp = new Random().Next(100000, 999999).ToString();
+
+            SqlCommand cmd = new SqlCommand("InsertOTP", con);
+            cmd.CommandType = CommandType.StoredProcedure;
+
+            cmd.Parameters.AddWithValue("@Email", Email);
+            cmd.Parameters.AddWithValue("@OTPCode", otp);
+            cmd.Parameters.AddWithValue("@ExpiryTime", DateTime.Now.AddMinutes(5));
+
+            con.Open();
+            cmd.ExecuteNonQuery();
+            con.Close();
+
+            // =========================
+            //  SEND EMAIL USING SMTP
+            // =========================
+
+            try
+            {
+                var message = new MimeMessage();
+
+                message.From.Add(new MailboxAddress("Crafted Treasures", "nancypatel8002@gmail.com"));
+                message.To.Add(MailboxAddress.Parse(Email));
+
+                message.Subject = "Your OTP Code";
+
+                message.Body = new TextPart("plain")
+                {
+                    Text = $"Your OTP for password reset is: {otp}\n\nIt is valid for 5 minutes."
+                };
+
+                using (var client = new MailKit.Net.Smtp.SmtpClient())
+                {
+                    client.Connect("smtp.gmail.com", 587, MailKit.Security.SecureSocketOptions.StartTls);
+
+                    // IMPORTANT: use Gmail App Password (NOT normal password)
+                    client.Authenticate("nancypatel8002@gmail.com", "fxvb dcqb ergw icks");
+
+                    client.Send(message);
+                    client.Disconnect(true);
+                }
+
+                return Ok(new { success = true, message = "OTP sent successfully" });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+        }
+    }
+
+
+
+        [HttpPost("VerifyOTP")]
+        public IActionResult VerifyOTP(string Email, string OTP)
+        {
+            using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+            {
+                SqlCommand cmd = new SqlCommand("VerifyOTP", con);
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.AddWithValue("@Email", Email);
+                cmd.Parameters.AddWithValue("@OTPCode", OTP);
+
+                con.Open();
+
+                SqlDataReader reader = cmd.ExecuteReader();
+
+                if (reader.Read())
+                {
+                    reader.Close();
+
+                    // OPTIONAL: mark OTP as used
+                    SqlCommand updateCmd = new SqlCommand("MarkOTPUsed", con);
+                    updateCmd.CommandType = CommandType.StoredProcedure;
+
+                    updateCmd.Parameters.AddWithValue("@Email", Email);
+                    updateCmd.Parameters.AddWithValue("@OTPCode", OTP);
+
+                    updateCmd.ExecuteNonQuery();
+
+                    return Ok(new { success = true, message = "OTP verified" });
+                }
+
+                return Ok(new { success = false, message = "Invalid OTP" });
+            }
+        }
+
+
+
+        [HttpPost("ResetPassword")]
+        public IActionResult ResetPassword(string Email, string Passwords)
+        {
+            using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+            {
+                SqlCommand cmd = new SqlCommand("ResetUserPassword", con);
+
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.AddWithValue("@Email", Email);
+
+                cmd.Parameters.AddWithValue("@Passwords", Passwords);
+
+                con.Open();
+
+                cmd.ExecuteNonQuery();
+
+                con.Close();
+
+                return Ok(new { success = true, message = "Password reset successful" });
+            }
+        }
+
 
     }
 }  

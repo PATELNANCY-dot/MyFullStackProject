@@ -615,7 +615,34 @@ namespace practiceApplication.Controllers
 
         }
 
-       
+        [HttpPost("ChangePassword")]
+        public IActionResult ChangePassword(int ClientID, string OldPassword, string NewPassword)
+        {
+            string message = "";
+
+            try
+            {
+                using (SqlConnection con = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                {
+                    SqlCommand cmd = new SqlCommand("ChangePasswordByClientId", con);
+                    cmd.CommandType = CommandType.StoredProcedure;
+
+                    cmd.Parameters.AddWithValue("@ClientID", ClientID);
+                    cmd.Parameters.AddWithValue("@OldPassword", OldPassword);
+                    cmd.Parameters.AddWithValue("@NewPassword", NewPassword);
+
+                    con.Open();
+
+                    message = cmd.ExecuteScalar()?.ToString();
+                }
+
+                return Json(new { success = true, message = message });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
 
     }
 }
